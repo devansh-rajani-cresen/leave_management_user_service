@@ -4,9 +4,8 @@ import com.cresensolutions.userservice.dto.*;
 import com.cresensolutions.userservice.repository.UserRepository;
 import com.cresensolutions.userservice.service.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Slf4j
 @RestController
@@ -19,7 +18,9 @@ public class UserController {
     private final ForgotPasswordService forgotPasswordService;
     private final ResetPasswordService resetPasswordService;
 
-    public UserController(UserService userService, UserRepository userRepository, ForgotPasswordService forgotPasswordService, ResetPasswordService resetPasswordService) {
+    public UserController(UserService userService, UserRepository userRepository,
+                          ForgotPasswordService forgotPasswordService,
+                          ResetPasswordService resetPasswordService) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.forgotPasswordService = forgotPasswordService;
@@ -27,23 +28,32 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request) {
-        return userService.login(request);
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        return ResponseEntity.ok(userService.login(request));
     }
 
     @PostMapping("/send-otp")
-    public boolean sendOtp(@RequestBody SendOtp sendOtpRequest) {
-        log.info("Sending OTP for Email: {}",sendOtpRequest.getEmail());
-        return forgotPasswordService.sendOtp(sendOtpRequest);
+    public ResponseEntity<?> sendOtp(@RequestBody SendOtp sendOtpRequest) {
+        log.info("Sending OTP for Email: {}", sendOtpRequest.getEmail());
+        forgotPasswordService.sendOtp(sendOtpRequest);
+        return ResponseEntity.ok(
+                new SuccessResponse("OTP sent successfully")
+        );
     }
 
     @PostMapping("/verify-otp")
-    public boolean verifyOtp(@RequestBody VerifyOtp verifyOtpRequest) {
-        return forgotPasswordService.verifyOtp(verifyOtpRequest);
+    public ResponseEntity<?> verifyOtp(@RequestBody VerifyOtp verifyOtpRequest) {
+        forgotPasswordService.verifyOtp(verifyOtpRequest);
+        return ResponseEntity.ok(
+                new SuccessResponse("OTP verified successfully")
+        );
     }
 
     @PostMapping("/reset-password")
-    public boolean resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
-        return resetPasswordService.resetPassword(resetPasswordRequest);
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
+        resetPasswordService.resetPassword(resetPasswordRequest);
+        return ResponseEntity.ok(
+                new SuccessResponse("Password reset successfully")
+        );
     }
 }
