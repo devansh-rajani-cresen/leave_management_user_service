@@ -6,4 +6,7 @@ public interface EmailService {
 
     // for sending welcoming message on creating new employee
     void sendWelcomeMessage(String toEmail, String username, String password);
+
+    // send mail on deleting user
+    void sendDeleteMessage(String fullName, String toEmail);
 }

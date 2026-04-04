@@ -72,7 +72,7 @@ public class EmailServiceImpl implements EmailService {
             context.setVariable("password", password);
             context.setVariable("loginUrl", "http://localhost:4200/auth/login");
 
-            String htmlContent = templateEngine.process("welcome-email", context);
+            String htmlContent = templateEngine.process("welcome-mail", context);
 
             helper.setText(htmlContent, true);
             mailSender.send(message);
@@ -81,6 +81,34 @@ public class EmailServiceImpl implements EmailService {
             log.error("Error while sending Welcome email", e);
             throw new CustomException(
                     "Unable to send welcome mail. Please contact support.",
+                    500
+            );
+        }
+    }
+
+    @Override
+    public void sendDeleteMessage(String fullName, String toEmail) {
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, "Cresen Solutions");
+            helper.setTo(toEmail);
+            helper.setSubject("Exit Process initiated at Cresen Solutions");
+
+            Context context = new Context();
+            context.setVariable("fullName", fullName);
+
+            String htmlContent = templateEngine.process("delete-mail", context);
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+
+        } catch (Exception e) {
+            log.error("Error while sending Delete email", e);
+            throw new CustomException(
+                    "Unable to send account deactivation email. Please contact support.",
                     500
             );
         }
