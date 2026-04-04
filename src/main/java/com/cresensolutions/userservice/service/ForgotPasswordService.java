@@ -4,6 +4,6 @@ import com.cresensolutions.userservice.dto.SendOtp;
 import com.cresensolutions.userservice.dto.VerifyOtp;
 
 public interface ForgotPasswordService {
-        boolean sendOtp(SendOtp sendOtpRequest);
-        boolean verifyOtp(VerifyOtp verifyOtpRequest);
+        void sendOtp(SendOtp sendOtpRequest);
+        void verifyOtp(VerifyOtp verifyOtpRequest);
 }

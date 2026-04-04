@@ -26,7 +26,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
     }
 
     @Override
-    public boolean sendOtp(SendOtp sendOtpRequest) {
+    public void sendOtp(SendOtp sendOtpRequest) {
 
         String email = sendOtpRequest.getEmail();
 
@@ -47,7 +47,6 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         try {
             otpRepository.save(otpEntity);
             emailService.sendOtp(email, otp);
-            return true;
         } catch (DataAccessException e) {
             throw new CustomException("Database error while saving OTP", 500);
         } catch (MailException e) {
@@ -56,7 +55,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
     }
 
     @Override
-    public boolean verifyOtp(VerifyOtp verifyOtpRequest) {
+    public void verifyOtp(VerifyOtp verifyOtpRequest) {
 
         String email = verifyOtpRequest.getEmail();
         String inputOtp = verifyOtpRequest.getOtp();
@@ -77,9 +76,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         if (!otpEntity.getOtpCode().equals(inputOtp)) {
             throw new CustomException("Invalid OTP", 400);
         }
-
         // Success case
         otpRepository.delete(otpEntity);
-        return true;
     }
 }
