@@ -2,6 +2,7 @@ package com.cresensolutions.userservice.service;
 
 import com.cresensolutions.userservice.dto.ResetPasswordRequest;
 import com.cresensolutions.userservice.entity.User;
+import com.cresensolutions.userservice.exception.CustomException;
 import com.cresensolutions.userservice.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,23 +20,22 @@ public class ResetPasswordServiceImpl implements ResetPasswordService{
     }
 
     @Override
-    public boolean resetPassword(ResetPasswordRequest resetPasswordRequest) {
+    public void resetPassword(ResetPasswordRequest resetPasswordRequest) {
         String reqUserMail = resetPasswordRequest.getEmail();
         String reqUserPassword = resetPasswordRequest.getNewPassword();
 
         Optional<User> dbUserMail = userRepository.findByUserName(reqUserMail);
 
         if (dbUserMail.isEmpty()) {
-            return false;
+            throw new CustomException("User not found with this email", 404);
         }
 
         try {
             User user = dbUserMail.get();
-            user.setUserPswd(passwordEncoder.encode(reqUserPassword)); // encode and set new password
+            user.setUserPswd(passwordEncoder.encode(reqUserPassword));
             userRepository.save(user);
-            return true;
         } catch (Exception e) {
-            return false;
+            throw new CustomException("Failed to reset password", 500);
         }
     }
 
