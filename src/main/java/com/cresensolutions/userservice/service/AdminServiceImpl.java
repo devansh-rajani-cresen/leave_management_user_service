@@ -1,8 +1,10 @@
 package com.cresensolutions.userservice.service;
 
+import com.cresensolutions.userservice.dto.DeleteUser;
 import com.cresensolutions.userservice.dto.UserRequest;
 import com.cresensolutions.userservice.dto.UserResponse;
 import com.cresensolutions.userservice.entity.User;
+import com.cresensolutions.userservice.exception.CustomException;
 import com.cresensolutions.userservice.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -49,7 +51,7 @@ public class AdminServiceImpl implements AdminService {
 
     // Save User to DB (Add Employee)
     @Override
-    public boolean saveUser(UserRequest userRequest) {
+    public void saveUser(UserRequest userRequest) {
         try {
             User user = new User();
             user.setFullName(userRequest.getFullName());
@@ -63,55 +65,65 @@ public class AdminServiceImpl implements AdminService {
             user.setCreatedBy(userRequest.getCreatedBy());
             user.setCreateDate(OffsetDateTime.now());
 
-            // save user into DB & Send Welcome Message
             userRepository.save(user);
-            emailService.sendWelcomeMessage(userRequest.getEmailId(), user.getUserName(), user.getUserPswd());
+            emailService.sendWelcomeMessage(
+                    userRequest.getEmailId(),
+                    user.getUserName(),
+                    userRequest.getUserPassword()
+            );
             log.info("User saved successfully: {}", userRequest.getUserName());
-            return true;
-
         } catch (Exception e) {
-            log.error("Error occurred during saving & sending welcome message to user: {}. Error: {}", userRequest.getUserName(), e.getMessage());
-            return false;
+            log.error("Error saving user: {}. Error: {}", userRequest.getUserName(), e.getMessage());
+            throw new CustomException("Unable to create user. Please try again.", 500);
         }
     }
 
     // Delete User by Username (Delete Employee)
     @Override
     @Transactional
-    public boolean deleteUserByUsername(String username) {
+    public void deleteUser(DeleteUser deleteUser) {
+        String fullName = deleteUser.getFullName();
+        String userName = deleteUser.getUserName();
+        String emailId = deleteUser.getEmailId();
+
+        boolean exists = userRepository.existsByUserName(userName);
+
+        if (!exists) {
+            throw new CustomException("User not found", 404);
+        }
         try {
-            boolean exists = userRepository.existsByUserName(username);
-            if (!exists) {
-                throw new RuntimeException("User not found!");
-            }
-            userRepository.deleteByUserName(username);
-            return true;
+            log.info("First deleting user with username from DB: {}", userName);
+            userRepository.deleteByUserName(userName);
+            log.info("Now sending delete mail to that user: {}", fullName);
+            emailService.sendDeleteMessage(
+                    fullName,
+                    emailId
+            );
         } catch (Exception e) {
             log.error("Error deleting user: {}", e.getMessage());
-            return false;
+            throw new CustomException("Failed to delete user", 500);
         }
     }
 
+    // Update user
     @Override
-    public boolean updateUser(UserRequest userRequest) {
+    public void updateUser(UserRequest userRequest) {
+
         String userName = userRequest.getUserName();
 
         if (userName == null || userName.isBlank()) {
-            log.warn("Username is null or empty in update request");
-            return false;
+            throw new CustomException("Username is required", 400);
         }
 
         Optional<User> existingUser = userRepository.findByUserName(userName);
 
         if (existingUser.isEmpty()) {
-            log.warn("User not found for username: {}", userName);
-            return false;
+            throw new CustomException("User not found", 404);
         }
 
         try {
             User user = existingUser.get();
 
-            // Update only non-null fields
             if (userRequest.getFullName() != null && !userRequest.getFullName().isBlank()) {
                 user.setFullName(userRequest.getFullName());
             }
@@ -130,19 +142,18 @@ public class AdminServiceImpl implements AdminService {
             if (userRequest.getActive() != null) {
                 user.setActive(userRequest.getActive());
             }
-            // Only update password if a new one is provided
             if (userRequest.getUserPassword() != null && !userRequest.getUserPassword().isBlank()) {
                 user.setUserPswd(passwordEncoder.encode(userRequest.getUserPassword()));
             }
+
             user.setUpdateDate(OffsetDateTime.now());
-            user.setUpdatedBy(userRequest.getCreatedBy()); // createdBy = who made the change
+            user.setUpdatedBy(userRequest.getCreatedBy());
 
             userRepository.save(user);
-            log.info("User updated successfully: {}", userName);
-            return true;
+
         } catch (Exception e) {
             log.error("Error updating user: {}. Error: {}", userName, e.getMessage());
-            return false;
+            throw new CustomException("Failed to update user", 500);
         }
     }
 }
