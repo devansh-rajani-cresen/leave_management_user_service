@@ -1,3 +1,5 @@
+// In this UserController file, logic related to Login and forgot password service implemented
+
 package com.cresensolutions.userservice.controller;
 
 import com.cresensolutions.userservice.dto.*;
@@ -27,13 +29,17 @@ public class UserController {
         this.resetPasswordService = resetPasswordService;
     }
 
+    // LOGIN SECTION
+
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(userService.login(request));
     }
 
+    // FORGOT PASSWORD SECTION
+
     @PostMapping("/send-otp")
-    public ResponseEntity<?> sendOtp(@RequestBody SendOtp sendOtpRequest) {
+    public ResponseEntity<SuccessResponse> sendOtp(@RequestBody SendOtp sendOtpRequest) {
         log.info("Sending OTP for Email: {}", sendOtpRequest.getEmail());
         forgotPasswordService.sendOtp(sendOtpRequest);
         return ResponseEntity.ok(
@@ -42,7 +48,7 @@ public class UserController {
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<?> verifyOtp(@RequestBody VerifyOtp verifyOtpRequest) {
+    public ResponseEntity<SuccessResponse> verifyOtp(@RequestBody VerifyOtp verifyOtpRequest) {
         forgotPasswordService.verifyOtp(verifyOtpRequest);
         return ResponseEntity.ok(
                 new SuccessResponse("OTP verified successfully")
@@ -50,7 +56,7 @@ public class UserController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
+    public ResponseEntity<SuccessResponse> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
         resetPasswordService.resetPassword(resetPasswordRequest);
         return ResponseEntity.ok(
                 new SuccessResponse("Password reset successfully")
