@@ -1,6 +1,7 @@
-package com.cresensolutions.userservice.service;
+package com.cresensolutions.userservice.service.impl;
 
 import com.cresensolutions.userservice.exception.CustomException;
+import com.cresensolutions.userservice.service.EmailService;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +10,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import static com.cresensolutions.userservice.common.UserConstants.*;
 
 @Slf4j
 @Service
@@ -34,13 +36,13 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail, "Cresen Solutions");
+            helper.setFrom(fromEmail, FROM_COMPANY_NAME);
             helper.setTo(toEmail);
-            helper.setSubject("Password Reset OTP for Cresen Solutions");
+            helper.setSubject(RESET_PASSWORD_OTP_SUBJECT);
 
             // Thymeleaf context
             Context context = new Context();
-            context.setVariable("otp", otp);
+            context.setVariable(OTP, otp);
 
             String htmlContent = templateEngine.process("otp-email", context);
 
@@ -50,7 +52,7 @@ public class EmailServiceImpl implements EmailService {
         } catch (Exception e) {
             log.error("Error while sending OTP email", e);
             throw new CustomException(
-                    "Unable to Send OTP. Please try again later.",
+                    SEND_OTP_ERROR,
                     500
             );
         }
@@ -63,14 +65,14 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail, "Cresen Solutions");
+            helper.setFrom(fromEmail, FROM_COMPANY_NAME);
             helper.setTo(toEmail);
-            helper.setSubject("Welcome to Cresen Solutions!");
+            helper.setSubject(WELCOME_MAIL_SUBJECT);
 
             Context context = new Context();
-            context.setVariable("username", username);
-            context.setVariable("password", password);
-            context.setVariable("loginUrl", "http://localhost:4200/auth/login");
+            context.setVariable(USERNAME, username);
+            context.setVariable(PASSWORD, password);
+            context.setVariable(LOGIN_URL, LOGIN_URL_VALUE);
 
             String htmlContent = templateEngine.process("welcome-mail", context);
 
@@ -80,7 +82,7 @@ public class EmailServiceImpl implements EmailService {
         } catch (Exception e) {
             log.error("Error while sending Welcome email", e);
             throw new CustomException(
-                    "Unable to send welcome mail. Please contact support.",
+                    SEND_WELCOME_MAIL_ERROR,
                     500
             );
         }
@@ -93,12 +95,12 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail, "Cresen Solutions");
+            helper.setFrom(fromEmail, FROM_COMPANY_NAME);
             helper.setTo(toEmail);
-            helper.setSubject("Exit Process initiated at Cresen Solutions");
+            helper.setSubject(EXIT_MAIL_SUBJECT);
 
             Context context = new Context();
-            context.setVariable("fullName", fullName);
+            context.setVariable(FULL_NAME, fullName);
 
             String htmlContent = templateEngine.process("delete-mail", context);
 
@@ -108,7 +110,7 @@ public class EmailServiceImpl implements EmailService {
         } catch (Exception e) {
             log.error("Error while sending Delete email", e);
             throw new CustomException(
-                    "Unable to send account deactivation email. Please contact support.",
+                    EXIT_MAIL_SEND_ERROR,
                     500
             );
         }
