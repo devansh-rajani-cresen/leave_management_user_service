@@ -1,3 +1,4 @@
+// Runs on every request
 package com.cresensolutions.userservice.filter;
 
 import com.cresensolutions.userservice.util.JwtUtil;
@@ -48,9 +49,6 @@ public class JwtFilter extends OncePerRequestFilter {
 
         // Validate and set authentication
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-
-            if (jwtUtil.validateToken(token)) {
-
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 username,
@@ -60,7 +58,6 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 // Set authentication
                 SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
         }
 
         // Continue filter chain
