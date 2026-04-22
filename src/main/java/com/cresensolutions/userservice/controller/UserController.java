@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/auth")
@@ -62,4 +64,13 @@ public class UserController {
                 new SuccessResponse("Password reset successfully")
         );
     }
+
+    // RETURN MANAGERS
+
+    @GetMapping("/get-managers")  // send managers to frontend to display in dropdown
+    public List<ManagerResponse> getManagers() {
+        log.info("Fetching all managers!");
+        return userService.getManagers();
+    }
+
 }

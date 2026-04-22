@@ -53,7 +53,7 @@ public class AdminServiceImpl implements AdminService {
             response.setEmailId(user.getEmailId());
             Role role = user.getRole();
             response.setRoleId(role != null ? role.getId() : null);
-            response.setRole(role != null ? role.getRoleName() : null);
+            response.setRole(role != null ? role.getRoleName() : user.getRoleName());
             response.setGender(user.getGender());
             response.setActive(user.getActive());
             response.setCompanyId(user.getCompanyId());
@@ -72,6 +72,7 @@ public class AdminServiceImpl implements AdminService {
             user.setUserPswd(passwordEncoder.encode(userRequest.getUserPassword()));
             user.setEmailId(userRequest.getEmailId());
             user.setRole(role);
+            user.setRoleName(role.getRoleName());
             user.setGender(userRequest.getGender());
             user.setActive(userRequest.getActive());
             user.setCompanyId(userRequest.getCompanyId());
@@ -165,7 +166,9 @@ public class AdminServiceImpl implements AdminService {
                 user.setEmailId(userRequest.getEmailId());
             }
             if (userRequest.getRoleId() != null || (userRequest.getRole() != null && !userRequest.getRole().isBlank())) {
-                user.setRole(resolveRole(userRequest));
+                Role role = resolveRole(userRequest);
+                user.setRole(role);
+                user.setRoleName(role.getRoleName());
             }
             if (userRequest.getGender() != null && !userRequest.getGender().isBlank()) {
                 user.setGender(userRequest.getGender());

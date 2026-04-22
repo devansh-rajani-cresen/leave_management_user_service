@@ -4,11 +4,13 @@ import com.cresensolutions.userservice.dto.ResetPasswordRequest;
 import com.cresensolutions.userservice.entity.User;
 import com.cresensolutions.userservice.exception.CustomException;
 import com.cresensolutions.userservice.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class ResetPasswordServiceImpl implements ResetPasswordService{
 
     private final UserRepository userRepository;
@@ -24,7 +26,7 @@ public class ResetPasswordServiceImpl implements ResetPasswordService{
         String reqUserMail = resetPasswordRequest.getEmail();
         String reqUserPassword = resetPasswordRequest.getNewPassword();
 
-        Optional<User> dbUserMail = userRepository.findByUserName(reqUserMail);
+        Optional<User> dbUserMail = userRepository.findByEmailId(reqUserMail);
 
         if (dbUserMail.isEmpty()) {
             throw new CustomException("User not found with this email", 404);
