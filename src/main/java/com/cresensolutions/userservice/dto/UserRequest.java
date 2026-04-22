@@ -9,6 +9,7 @@ public class UserRequest {
     private String userName;
     private String userPassword;
     private String emailId;
+    private Long roleId;
     private String role;
     private String gender;
     private Boolean active;

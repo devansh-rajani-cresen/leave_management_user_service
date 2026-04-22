@@ -8,6 +8,7 @@ public class UserResponse {
     private String userName;
     private String fullName;
     private String emailId;
+    private Long roleId;
     private String role;
     private String gender;
     private Boolean active;
