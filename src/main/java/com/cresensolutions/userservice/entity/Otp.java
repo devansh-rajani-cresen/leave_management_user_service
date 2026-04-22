@@ -21,6 +21,6 @@ public class Otp {
     @Column(name = "otp_code")
     private String otpCode;
 
-    @Column(name = "expiry_time")
+    @Column(name = "expiry_time", columnDefinition = "timestamp(6)")
     private LocalDateTime expiryTime;
 }

@@ -28,8 +28,12 @@ public class User {
     @Column(name = "user_pswd")
     private String userPswd;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "role_id", referencedColumnName = "id")
+    private Role role;
+
     @Column(name = "role")
-    private String role;
+    private String roleName;
 
     @Column(name = "active", nullable = false)
     private Boolean active;
