@@ -8,6 +8,8 @@ public class UserConstants {
     public static final String PASSWORD = "password";
     public static final String FULL_NAME = "fullName";
     public static final Long MANAGER_ROLE_ID = 2L;
+    public static final String AUTH_HEADER = "Authorization";
+    public static final String HEADER_STARTING = "Bearer ";
 
     // for Email Template
     public static final String LOGIN_URL = "loginUrl";
