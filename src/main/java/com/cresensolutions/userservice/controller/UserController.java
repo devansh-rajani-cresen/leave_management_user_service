@@ -5,6 +5,9 @@ package com.cresensolutions.userservice.controller;
 import com.cresensolutions.userservice.dto.*;
 import com.cresensolutions.userservice.repository.UserRepository;
 import com.cresensolutions.userservice.service.*;
+import com.cresensolutions.userservice.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,21 +18,15 @@ import java.util.List;
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin("*")
+@AllArgsConstructor
 public class UserController {
 
     public final UserService userService;
     public final UserRepository userRepository;
     private final ForgotPasswordService forgotPasswordService;
     private final ResetPasswordService resetPasswordService;
-
-    public UserController(UserService userService, UserRepository userRepository,
-                          ForgotPasswordService forgotPasswordService,
-                          ResetPasswordService resetPasswordService) {
-        this.userService = userService;
-        this.userRepository = userRepository;
-        this.forgotPasswordService = forgotPasswordService;
-        this.resetPasswordService = resetPasswordService;
-    }
+    private final JwtUtil jwtUtil;
+    private final MyProfileService myProfileService;
 
     // LOGIN SECTION
 
@@ -42,7 +39,6 @@ public class UserController {
 
     @PostMapping("/send-otp")
     public ResponseEntity<SuccessResponse> sendOtp(@RequestBody SendOtp sendOtpRequest) {
-        log.info("Sending OTP for Email: {}", sendOtpRequest.getEmail());
         forgotPasswordService.sendOtp(sendOtpRequest);
         return ResponseEntity.ok(
                 new SuccessResponse("OTP sent successfully")
@@ -71,6 +67,15 @@ public class UserController {
     public List<ManagerResponse> getManagers() {
         log.info("Fetching all managers!");
         return userService.getManagers();
+    }
+
+    // USER PROFILE
+
+    @GetMapping("/my-profile")
+    public MyProfile getMyProfile(HttpServletRequest request){
+        String token = request.getHeader("Authorization").substring(7);
+        Long userId = jwtUtil.extractUserId(token);
+        return myProfileService.getMyProfileData(userId);
     }
 
 }
