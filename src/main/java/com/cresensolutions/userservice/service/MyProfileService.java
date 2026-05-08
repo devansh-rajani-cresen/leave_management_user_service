@@ -1,4 +1,7 @@
 package com.cresensolutions.userservice.service;
 
-public class MyProfileService {
+import com.cresensolutions.userservice.dto.MyProfile;
+
+public interface MyProfileService {
+    MyProfile getMyProfileData(Long userId);
 }
