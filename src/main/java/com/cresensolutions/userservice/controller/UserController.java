@@ -1,47 +1,45 @@
-// In this UserController file, logic related to Login and forgot password service implemented
+// In this file, logic related to Login, forgot password, OTP and Reset Password implemented
 
 package com.cresensolutions.userservice.controller;
 
 import com.cresensolutions.userservice.dto.*;
-import com.cresensolutions.userservice.repository.UserRepository;
 import com.cresensolutions.userservice.service.*;
-import com.cresensolutions.userservice.util.JwtUtil;
+import com.cresensolutions.userservice.util.JwtRequestUtil;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+
+import static com.cresensolutions.userservice.common.UserConstants.AUTH_HEADER;
+import static com.cresensolutions.userservice.common.UserConstants.TOKEN_STARTING_INDEX;
 
 @Slf4j
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin("*")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class UserController {
 
-    public final UserService userService;
-    public final UserRepository userRepository;
+    private final UserService userService;
     private final ForgotPasswordService forgotPasswordService;
     private final ResetPasswordService resetPasswordService;
-    private final JwtUtil jwtUtil;
     private final MyProfileService myProfileService;
+    private final JwtRequestUtil jwtRequestUtil;
 
     // LOGIN SECTION
-
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(userService.login(request));
     }
 
     // FORGOT PASSWORD SECTION
-
     @PostMapping("/send-otp")
     public ResponseEntity<SuccessResponse> sendOtp(@RequestBody SendOtp sendOtpRequest) {
         forgotPasswordService.sendOtp(sendOtpRequest);
         return ResponseEntity.ok(
-                new SuccessResponse("OTP sent successfully")
+                new SuccessResponse("OTP sent!")
         );
     }
 
@@ -49,32 +47,29 @@ public class UserController {
     public ResponseEntity<SuccessResponse> verifyOtp(@RequestBody VerifyOtp verifyOtpRequest) {
         forgotPasswordService.verifyOtp(verifyOtpRequest);
         return ResponseEntity.ok(
-                new SuccessResponse("OTP verified successfully")
+                new SuccessResponse("OTP verified!")
         );
     }
 
+    // RESET PASSWORD SECTION
     @PostMapping("/reset-password")
     public ResponseEntity<SuccessResponse> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
         resetPasswordService.resetPassword(resetPasswordRequest);
         return ResponseEntity.ok(
-                new SuccessResponse("Password reset successfully")
+                new SuccessResponse("Password reset!")
         );
     }
 
-    // RETURN MANAGERS
-
-    @GetMapping("/get-managers")  // send managers to frontend to display in dropdown
+    // RETURN MANAGERS TO FRONTEND
+    @GetMapping("/get-managers")
     public List<ManagerResponse> getManagers() {
-        log.info("Fetching all managers!");
         return userService.getManagers();
     }
 
     // USER PROFILE
-
     @GetMapping("/my-profile")
     public MyProfile getMyProfile(HttpServletRequest request){
-        String token = request.getHeader("Authorization").substring(7);
-        Long userId = jwtUtil.extractUserId(token);
+        Long userId = jwtRequestUtil.extractUserId(request);
         return myProfileService.getMyProfileData(userId);
     }
 
