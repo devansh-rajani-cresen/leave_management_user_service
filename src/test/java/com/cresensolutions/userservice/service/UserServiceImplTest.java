@@ -1,27 +1,28 @@
 package com.cresensolutions.userservice.service;
 
-import com.cresensolutions.userservice.dto.LoginRequest;
-import com.cresensolutions.userservice.dto.LoginResponse;
+import com.cresensolutions.userservice.dto.*;
+import com.cresensolutions.userservice.entity.Role;
 import com.cresensolutions.userservice.entity.User;
+import com.cresensolutions.userservice.exception.CustomException;
 import com.cresensolutions.userservice.repository.UserRepository;
+import com.cresensolutions.userservice.service.impl.UserServiceImpl;
 import com.cresensolutions.userservice.util.JwtUtil;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.quality.Strictness;
-import org.mockito.junit.jupiter.MockitoSettings;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
+import static com.cresensolutions.userservice.common.UserConstants.MANAGER_ROLE_ID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class UserServiceImplTest {
 
     @Mock
@@ -36,114 +37,148 @@ class UserServiceImplTest {
     @InjectMocks
     private UserServiceImpl userService;
 
-    private LoginRequest loginRequest;
-    private User mockUser;
-
-    private final String email = "test@example.com";
-    private final String rawPassword = "password123";
-    private final String encodedPassword = "$2a$10$encodedpassword";
-    private final String role = "EMPLOYEE";
-    private final String token = "mock.jwt.token";
-
-    @BeforeEach
-    void setUp() {
-        // Setup LoginRequest
-        loginRequest = new LoginRequest();
-        loginRequest.setUsername(email);
-        loginRequest.setPassword(rawPassword);
-
-        // Setup mock User from DB
-        mockUser = new User();
-        mockUser.setUserName(email);
-        mockUser.setUserPswd(encodedPassword);
-        mockUser.setRole(role);
+    // Helper to encode password to Base64 as the service expects
+    private String encode(String value) {
+        return Base64.getEncoder().encodeToString(value.getBytes());
     }
 
-    // Valid credentials - should return LoginResponse with token
+    // LOGIN TESTS
     @Test
-    void login_ValidCredentials_ShouldReturnLoginResponse() {
-        when(userRepository.findByUserName(email)).thenReturn(Optional.of(mockUser));
-        when(passwordEncoder.matches(rawPassword, encodedPassword)).thenReturn(true);
-        when(jwtUtil.generateToken(email, role)).thenReturn(token);
+    void login_success() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("testuser");
+        request.setPassword(encode("plainPassword"));
 
-        LoginResponse response = userService.login(loginRequest);
+        Role role = new Role();
+        role.setUniqueName("EMPLOYEE");
 
-        assertNotNull(response);
-        assertEquals(token, response.getToken());
-        assertEquals(role, response.getRole());
-        assertEquals(email, response.getEmail());
+        User user = new User();
+        user.setId(1L);
+        user.setUserName("testuser");
+        user.setUserPswd("encodedPassword");
+        user.setRole(role);
+        user.setFullName("Test User");
+        user.setEmailId("test@mail.com");
 
-        verify(jwtUtil, times(1)).generateToken(email, role);
+        when(userRepository.findByUserName("testuser")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("plainPassword", "encodedPassword")).thenReturn(true);
+        when(jwtUtil.generateToken(anyString(), anyString(), anyLong(), anyString(), anyString())).thenReturn("mockToken");
+
+        LoginResponse res = userService.login(request);
+
+        assertNotNull(res);
+        assertEquals("mockToken", res.getToken());
+        assertEquals("EMPLOYEE", res.getRole());
+        verify(userRepository, times(1)).save(user); // Verifies lastLogin update
     }
 
-    // User not found - should throw RuntimeException
     @Test
-    void login_UserNotFound_ShouldThrowException() {
-        when(userRepository.findByUserName(email)).thenReturn(Optional.empty());
+    void login_userNotFound_throws404() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("unknown");
+        request.setPassword(encode("pw"));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.login(loginRequest);
-        });
+        when(userRepository.findByUserName("unknown")).thenReturn(Optional.empty());
 
-        assertEquals("User not exists in DB!", exception.getMessage());
-        verify(passwordEncoder, never()).matches(any(), any()); // should not check password
-        verify(jwtUtil, never()).generateToken(any(), any());   // should not generate token
+        CustomException ex = assertThrows(CustomException.class, () -> userService.login(request));
+        assertEquals(404, ex.getStatus());
+        assertEquals("User does not exist!", ex.getMessage());
     }
 
-    // Wrong password - should throw RuntimeException
     @Test
-    void login_WrongPassword_ShouldThrowException() {
-        when(userRepository.findByUserName(email)).thenReturn(Optional.of(mockUser));
-        when(passwordEncoder.matches(rawPassword, encodedPassword)).thenReturn(false); // wrong password
+    void login_invalidPassword_throws401() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("user");
+        request.setPassword(encode("wrong"));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.login(loginRequest);
-        });
+        User user = new User();
+        user.setUserPswd("correctEncoded");
+        when(userRepository.findByUserName("user")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "correctEncoded")).thenReturn(false);
 
-        assertEquals("Invalid Credentials!", exception.getMessage());
-        verify(jwtUtil, never()).generateToken(any(), any()); // should not generate token
+        CustomException ex = assertThrows(CustomException.class, () -> userService.login(request));
+        assertEquals(401, ex.getStatus());
+        assertEquals("Invalid credentials!", ex.getMessage());
     }
 
-    // Valid ADMIN role - should return correct role in response
     @Test
-    void login_AdminUser_ShouldReturnAdminRole() {
-        mockUser.setRole("ADMIN");
+    void login_roleNull_successWithNullRole() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("user");
+        request.setPassword(encode("pw"));
 
-        when(userRepository.findByUserName(email)).thenReturn(Optional.of(mockUser));
-        when(passwordEncoder.matches(rawPassword, encodedPassword)).thenReturn(true);
-        when(jwtUtil.generateToken(email, "ADMIN")).thenReturn(token);
+        User user = new User();
+        user.setRole(null); // Testing the mappedRole != null ? ... : null logic
 
-        LoginResponse response = userService.login(loginRequest);
+        when(userRepository.findByUserName("user")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(anyString(), any())).thenReturn(true);
 
-        assertEquals("ADMIN", response.getRole());
-        verify(jwtUtil, times(1)).generateToken(email, "ADMIN");
+        LoginResponse res = userService.login(request);
+        assertNull(res.getRole());
     }
 
-    // Valid MANAGER role - should return correct role in response
+    // GET MANAGERS TESTS
+
     @Test
-    void login_ManagerUser_ShouldReturnManagerRole() {
-        mockUser.setRole("MANAGER");
+    void getManagers_success() {
+        User m1 = new User();
+        m1.setId(10L);
+        m1.setFullName("Manager One");
 
-        when(userRepository.findByUserName(email)).thenReturn(Optional.of(mockUser));
-        when(passwordEncoder.matches(rawPassword, encodedPassword)).thenReturn(true);
-        when(jwtUtil.generateToken(email, "MANAGER")).thenReturn(token);
+        when(userRepository.findByRoleId(MANAGER_ROLE_ID)).thenReturn(List.of(m1));
 
-        LoginResponse response = userService.login(loginRequest);
+        List<ManagerResponse> result = userService.getManagers();
 
-        assertEquals("MANAGER", response.getRole());
-        verify(jwtUtil, times(1)).generateToken(email, "MANAGER");
+        assertEquals(1, result.size());
+        assertEquals(10L, result.get(0).getId());
+        assertEquals("Manager One", result.get(0).getFullName());
     }
 
-    // Token should not be null or empty on success
+    // EMPLOYEE COUNT TESTS
+
     @Test
-    void login_ValidCredentials_TokenShouldNotBeNullOrEmpty() {
-        when(userRepository.findByUserName(email)).thenReturn(Optional.of(mockUser));
-        when(passwordEncoder.matches(rawPassword, encodedPassword)).thenReturn(true);
-        when(jwtUtil.generateToken(email, role)).thenReturn(token);
+    void getEmployeeCount_success() {
+        when(userRepository.count()).thenReturn(50L);
 
-        LoginResponse response = userService.login(loginRequest);
+        long count = userService.getEmployeeCount();
 
-        assertNotNull(response.getToken());
-        assertFalse(response.getToken().isEmpty());
+        assertEquals(50L, count);
+        verify(userRepository, times(1)).count();
+    }
+
+    // SEARCH USER TESTS
+
+    @Test
+    void searchUserByName_success() {
+        User u1 = new User();
+        u1.setId(1L);
+        u1.setFullName("Devansh");
+        u1.setRoleName("ADMIN");
+
+        when(userRepository.findByFullNameContainingIgnoreCase("Devansh")).thenReturn(List.of(u1));
+
+        List<BasicUserInfoForAI> result = userService.searchUserByName("Devansh");
+
+        assertEquals(1, result.size());
+        assertEquals("Devansh", result.get(0).getFullName());
+        verify(userRepository).findByFullNameContainingIgnoreCase("Devansh");
+    }
+
+    // GET INFO BY ROLE TESTS
+
+    @Test
+    void getUserInfoByRole_success() {
+        User u1 = new User();
+        u1.setId(2L);
+        u1.setFullName("Devansh");
+        u1.setRoleName("ADMIN");
+
+        when(userRepository.findByRoleNameIgnoreCase("ADMIN")).thenReturn(List.of(u1));
+
+        List<BasicUserInfoForAI> result = userService.getUserInfoByRole("ADMIN");
+
+        assertEquals(1, result.size());
+        assertEquals("ADMIN", result.get(0).getRole());
+        verify(userRepository).findByRoleNameIgnoreCase("ADMIN");
     }
 }
