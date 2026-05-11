@@ -5,6 +5,7 @@ package com.cresensolutions.userservice.controller;
 import com.cresensolutions.userservice.dto.*;
 import com.cresensolutions.userservice.service.*;
 import com.cresensolutions.userservice.util.JwtRequestUtil;
+import com.cresensolutions.userservice.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class UserController {
     private final ResetPasswordService resetPasswordService;
     private final MyProfileService myProfileService;
     private final JwtRequestUtil jwtRequestUtil;
+    private final JwtUtil jwtUtil;
 
     // LOGIN SECTION
     @PostMapping("/login")
@@ -69,7 +71,8 @@ public class UserController {
     // USER PROFILE
     @GetMapping("/my-profile")
     public MyProfile getMyProfile(HttpServletRequest request){
-        Long userId = jwtRequestUtil.extractUserId(request);
+        String token = jwtRequestUtil.extractToken(request);
+        Long userId = jwtUtil.extractUserId(token);
         return myProfileService.getMyProfileData(userId);
     }
 

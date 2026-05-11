@@ -11,12 +11,11 @@ import static com.cresensolutions.userservice.common.UserConstants.*;
 public class JwtRequestUtil {
     private final JwtUtil jwtUtil;
 
-    public Long extractUserId(HttpServletRequest request){
+    public String extractToken(HttpServletRequest request){
         String authHeader = request.getHeader(AUTH_HEADER);
         if (authHeader == null || !authHeader.startsWith(HEADER_STARTING)){
             throw new CustomException("Invalid Token!", 400);
         }
-        String token = authHeader.substring(TOKEN_STARTING_INDEX);
-        return jwtUtil.extractUserId(token);
+        return authHeader.substring(TOKEN_STARTING_INDEX);
     }
 }
