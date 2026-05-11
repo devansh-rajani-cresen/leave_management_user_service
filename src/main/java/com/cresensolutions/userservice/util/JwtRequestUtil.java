@@ -9,8 +9,6 @@ import static com.cresensolutions.userservice.common.UserConstants.*;
 @Component
 @RequiredArgsConstructor
 public class JwtRequestUtil {
-    private final JwtUtil jwtUtil;
-
     public String extractToken(HttpServletRequest request){
         String authHeader = request.getHeader(AUTH_HEADER);
         if (authHeader == null || !authHeader.startsWith(HEADER_STARTING)){
