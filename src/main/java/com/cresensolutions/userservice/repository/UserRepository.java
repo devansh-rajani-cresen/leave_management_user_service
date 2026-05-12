@@ -1,4 +1,5 @@
 package com.cresensolutions.userservice.repository;
+
 import com.cresensolutions.userservice.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,4 +12,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     void deleteByUserName(String userName);
     List<User> findByRoleId(Long roleId);
     Optional<User> findByEmailId(String emailId);
+    List<User> findByFullNameContainingIgnoreCase(String name);
+    List<User> findByRoleNameIgnoreCase(String role);
 }
