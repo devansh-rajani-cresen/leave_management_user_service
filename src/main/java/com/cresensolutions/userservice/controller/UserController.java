@@ -13,9 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
-import static com.cresensolutions.userservice.common.UserConstants.AUTH_HEADER;
-import static com.cresensolutions.userservice.common.UserConstants.TOKEN_STARTING_INDEX;
-
 @Slf4j
 @RestController
 @RequestMapping("/auth")

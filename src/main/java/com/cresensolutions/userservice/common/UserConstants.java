@@ -10,6 +10,7 @@ public class UserConstants {
     public static final Long MANAGER_ROLE_ID = 2L;
     public static final String AUTH_HEADER = "Authorization";
     public static final String HEADER_STARTING = "Bearer ";
+    public static final Integer TOKEN_STARTING_INDEX = 7;
 
     // for Email Template
     public static final String LOGIN_URL = "loginUrl";
