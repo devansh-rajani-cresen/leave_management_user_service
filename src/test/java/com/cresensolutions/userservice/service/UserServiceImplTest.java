@@ -59,6 +59,7 @@ class UserServiceImplTest {
         user.setRole(role);
         user.setFullName("Test User");
         user.setEmailId("test@mail.com");
+        user.setActive(true);
 
         when(userRepository.findByUserName("testuser")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("plainPassword", "encodedPassword")).thenReturn(true);
@@ -93,6 +94,8 @@ class UserServiceImplTest {
 
         User user = new User();
         user.setUserPswd("correctEncoded");
+        user.setActive(true);
+
         when(userRepository.findByUserName("user")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong", "correctEncoded")).thenReturn(false);
 
@@ -109,12 +112,80 @@ class UserServiceImplTest {
 
         User user = new User();
         user.setRole(null); // Testing the mappedRole != null ? ... : null logic
+        user.setActive(true);
 
         when(userRepository.findByUserName("user")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(anyString(), any())).thenReturn(true);
 
         LoginResponse res = userService.login(request);
         assertNull(res.getRole());
+    }
+
+    // Inactive Role try to Log in
+    @Test
+    void login_inactiveUser_throws403(){
+        LoginRequest request = new LoginRequest();
+        request.setUsername("devansh");
+        request.setPassword(encode("demo"));
+
+        User user = new User();
+        user.setUserName("devansh");
+        user.setUserPswd("encodedPassword");
+        user.setActive(false);
+
+        when(userRepository.findByUserName("devansh")).thenReturn(Optional.of(user));
+
+        CustomException exception = assertThrows(
+                CustomException.class,
+                () -> userService.login(request)
+        );
+
+        assertEquals(403, exception.getStatus());
+        assertEquals(
+                "Sorry, your account is not activated yet. Please contact HR!",
+                exception.getMessage()
+        );
+    }
+
+    @Test
+    void login_activeUser_returnsLoginResponse() {
+
+        LoginRequest request = new LoginRequest();
+        request.setUsername("devansh");
+        request.setPassword(encode("demo"));
+
+        Role role = new Role();
+        role.setUniqueName("EMPLOYEE");
+
+        User user = new User();
+        user.setId(1L);
+        user.setUserName("testuser");
+        user.setUserPswd("encodedPassword");
+        user.setRole(role);
+        user.setFullName("Test User");
+        user.setEmailId("test@mail.com");
+        user.setActive(true);
+
+        when(userRepository.findByUserName("devansh"))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches("demo", "encodedPassword"))
+                .thenReturn(true);
+
+        when(jwtUtil.generateToken(
+                anyString(),
+                anyString(),
+                anyLong(),
+                anyString(),
+                anyString()
+        )).thenReturn("jwt-token");
+
+        LoginResponse response = userService.login(request);
+
+        assertNotNull(response);
+        assertEquals("jwt-token", response.getToken());
+
+        verify(userRepository).findByUserName("devansh");
     }
 
     // GET MANAGERS TESTS
