@@ -1,4 +1,4 @@
-package com.cresensolutions.userservice.service;
+package com.cresensolutions.userservice.service.impl;
 
 import com.cresensolutions.userservice.dto.DeleteUser;
 import com.cresensolutions.userservice.dto.UserRequest;
@@ -8,21 +8,26 @@ import com.cresensolutions.userservice.entity.User;
 import com.cresensolutions.userservice.exception.CustomException;
 import com.cresensolutions.userservice.repository.RoleRepository;
 import com.cresensolutions.userservice.repository.UserRepository;
+import com.cresensolutions.userservice.service.AdminService;
+import com.cresensolutions.userservice.service.EmailService;
 import com.cresensolutions.userservice.util.DateTimeUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
-
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
 
     private final UserRepository userRepository;
@@ -31,84 +36,45 @@ public class AdminServiceImpl implements AdminService {
     private final EmailService emailService;
     private final RestTemplate restTemplate;
 
-    public AdminServiceImpl(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, EmailService emailService, RestTemplate restTemplate) {
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.emailService = emailService;
-        this.restTemplate = restTemplate;
-    }
+    @Value("${create.leave.url}")
+    private String createLeaveUrl;
 
     // Fetch & Display all Users from DB
     @Override
     public List<UserResponse> getUsers() {
         List<User> users = userRepository.findAll();
-        log.info("Total users fetched: {}", users.size());
 
-        return users.stream().map(user -> {
-            UserResponse response = new UserResponse();
-            response.setId(user.getId());
-            response.setUserName(user.getUserName());
-            response.setFullName(user.getFullName());
-            response.setEmailId(user.getEmailId());
-            Role role = user.getRole();
-            response.setRoleId(role != null ? role.getId() : null);
-            response.setRole(role != null ? role.getRoleName() : user.getRoleName());
-            response.setGender(user.getGender());
-            response.setActive(user.getActive());
-            response.setCompanyId(user.getCompanyId());
-            return response;
-        }).toList();
+        return users
+                .stream()
+                .map(user -> {
+                    UserResponse response = new UserResponse();
+                    response.setId(user.getId());
+                    response.setUserName(user.getUserName());
+                    response.setFullName(user.getFullName());
+                    response.setEmailId(user.getEmailId());
+                    Role role = user.getRole();
+                    response.setRoleId(role != null ? role.getId() : null);
+                    response.setRole(role != null ? role.getRoleName() : user.getRoleName());
+                    response.setGender(user.getGender());
+                    response.setActive(user.getActive());
+                    response.setCompanyId(user.getCompanyId());
+                    return response;
+                }).toList();
     }
 
     // Save User to DB (Add Employee)
     @Override
+    @Transactional
     public void saveUser(UserRequest userRequest) {
         try {
-            User user = new User();
-            Role role = resolveRole(userRequest);
-            user.setFullName(userRequest.getFullName());
-            user.setUserName(userRequest.getUserName());
-            user.setUserPswd(passwordEncoder.encode(userRequest.getUserPassword()));
-            user.setEmailId(userRequest.getEmailId());
-            user.setRole(role);
-            user.setRoleName(role.getRoleName());
-            user.setGender(userRequest.getGender());
-            user.setActive(userRequest.getActive());
-            user.setCompanyId(userRequest.getCompanyId());
-            user.setCreatedBy(userRequest.getCreatedBy());
-            user.setCreateDate(DateTimeUtil.nowInIst());
-
+            User user = buildUser(userRequest);
             User savedUser = userRepository.save(user);
-            emailService.sendWelcomeMessage(
-                    userRequest.getEmailId(),
-                    user.getUserName(),
-                    userRequest.getUserPassword()
-            );
-
-            // Create employee_leave record in leave service
-            try {
-                Map<String, Object> employeeLeavePayload = new HashMap<>();
-                employeeLeavePayload.put("userId", savedUser.getId());
-                employeeLeavePayload.put("fullName", savedUser.getFullName());
-                employeeLeavePayload.put("emailId", savedUser.getEmailId());
-                employeeLeavePayload.put("gender", savedUser.getGender());
-
-                restTemplate.postForEntity(
-                        "http://localhost:8082/leaves/create-employee-leave",
-                        employeeLeavePayload,
-                        String.class
-                );
-                log.info("Employee leave record created for userId: {}", savedUser.getId());
-            } catch (Exception e) {
-                log.error("Failed to create employee leave record: {}", e.getMessage());
-                // Don't throw - user is already created
-            }
-            log.info("User saved successfully: {}", userRequest.getUserName());
+            createEmployeeLeave(savedUser);
+            sendWelcomeEmail(userRequest, user);
         } catch (CustomException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error saving user: {}. Error: {}", userRequest.getUserName(), e.getMessage());
+            log.error("Error saving user", e);
             throw new CustomException("Unable to create user. Please try again.", 500);
         }
     }
@@ -120,22 +86,14 @@ public class AdminServiceImpl implements AdminService {
         String fullName = deleteUser.getFullName();
         String userName = deleteUser.getUserName();
         String emailId = deleteUser.getEmailId();
-
         boolean exists = userRepository.existsByUserName(userName);
-
         if (!exists) {
             throw new CustomException("User not found", 404);
         }
         try {
-            log.info("First deleting user with username from DB: {}", userName);
             userRepository.deleteByUserName(userName);
-            log.info("Now sending delete mail to that user: {}", fullName);
-            emailService.sendDeleteMessage(
-                    fullName,
-                    emailId
-            );
+            emailService.sendDeleteMessage(fullName, emailId);
         } catch (Exception e) {
-            log.error("Error deleting user: {}", e.getMessage());
             throw new CustomException("Failed to delete user", 500);
         }
     }
@@ -143,56 +101,81 @@ public class AdminServiceImpl implements AdminService {
     // Update user
     @Override
     public void updateUser(UserRequest userRequest) {
-
         String userName = userRequest.getUserName();
-
-        if (userName == null || userName.isBlank()) {
-            throw new CustomException("Username is required", 400);
-        }
-
-        Optional<User> existingUser = userRepository.findByUserName(userName);
-
-        if (existingUser.isEmpty()) {
-            throw new CustomException("User not found", 404);
-        }
+        validateUsername(userName);
+        User user = userRepository.findByUserName(userName)
+                .orElseThrow(() -> new CustomException("User not found!", 404));
 
         try {
-            User user = existingUser.get();
-
-            if (userRequest.getFullName() != null && !userRequest.getFullName().isBlank()) {
-                user.setFullName(userRequest.getFullName());
-            }
-            if (userRequest.getEmailId() != null && !userRequest.getEmailId().isBlank()) {
-                user.setEmailId(userRequest.getEmailId());
-            }
-            if (userRequest.getRoleId() != null || (userRequest.getRole() != null && !userRequest.getRole().isBlank())) {
-                Role role = resolveRole(userRequest);
-                user.setRole(role);
-                user.setRoleName(role.getRoleName());
-            }
-            if (userRequest.getGender() != null && !userRequest.getGender().isBlank()) {
-                user.setGender(userRequest.getGender());
-            }
-            if (userRequest.getCompanyId() != null && !userRequest.getCompanyId().isBlank()) {
-                user.setCompanyId(userRequest.getCompanyId());
-            }
-            if (userRequest.getActive() != null) {
-                user.setActive(userRequest.getActive());
-            }
-            if (userRequest.getUserPassword() != null && !userRequest.getUserPassword().isBlank()) {
-                user.setUserPswd(passwordEncoder.encode(userRequest.getUserPassword()));
-            }
-
+            updateBasicDetails(userRequest, user);
+            updateRole(userRequest, user);
+            updatePassword(userRequest, user);
             user.setUpdateDate(DateTimeUtil.nowInIst());
             user.setUpdatedBy(userRequest.getCreatedBy());
-
             userRepository.save(user);
         } catch (CustomException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error updating user: {}. Error: {}", userName, e.getMessage());
-            throw new CustomException("Failed to update user", 500);
+            throw new CustomException("Failed to update user!", 500);
         }
+    }
+
+    // HELPER: for Create Employee
+
+    private User buildUser(UserRequest userRequest){
+
+        Role role = resolveRole(userRequest);
+        User user = new User();
+
+        user.setFullName(userRequest.getFullName());
+        user.setUserName(userRequest.getUserName());
+        user.setUserPswd(passwordEncoder.encode(userRequest.getUserPassword()));
+        user.setEmailId(userRequest.getEmailId());
+        user.setRole(role);
+        user.setRoleName(role.getRoleName());
+        user.setGender(userRequest.getGender());
+        user.setActive(userRequest.getActive());
+        user.setCompanyId(userRequest.getCompanyId());
+        user.setCreatedBy(userRequest.getCreatedBy());
+        user.setCreateDate(DateTimeUtil.nowInIst());
+
+        return user;
+    }
+
+    private void createEmployeeLeave(User savedUser){
+
+        try {
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, Object> payload = new HashMap<>();
+
+            payload.put("userId", savedUser.getId());
+            payload.put("fullName", savedUser.getFullName());
+            payload.put("emailId", savedUser.getEmailId());
+            payload.put("gender", savedUser.getGender());
+
+            HttpEntity<Map<String, Object>> requestEntity =
+                    new HttpEntity<>(payload, headers);
+
+            restTemplate.postForEntity(
+                    createLeaveUrl,
+                    requestEntity,
+                    String.class
+            );
+
+        } catch (Exception e) {
+            throw new CustomException("Failed to create employee leave", 500);
+        }
+    }
+
+    private void sendWelcomeEmail(UserRequest userRequest, User user){
+        emailService.sendWelcomeMessage(
+                userRequest.getEmailId(),
+                user.getUserName(),
+                userRequest.getUserPassword()
+        );
     }
 
     private Role resolveRole(UserRequest userRequest) {
@@ -207,5 +190,58 @@ public class AdminServiceImpl implements AdminService {
         }
 
         throw new CustomException("Role is required", 400);
+    }
+
+    // HELPER: for Update Employee
+
+    private void validateUsername(String userName){
+        if(userName == null || userName.isBlank()){
+            throw new CustomException("Username is required", 400);
+        }
+    }
+
+    private void updateBasicDetails(UserRequest request, User user){
+
+        if(request.getFullName() != null &&
+                !request.getFullName().isBlank()) {
+            user.setFullName(request.getFullName());
+        }
+
+        if(request.getEmailId() != null &&
+                !request.getEmailId().isBlank()) {
+            user.setEmailId(request.getEmailId());
+        }
+
+        if(request.getGender() != null &&
+                !request.getGender().isBlank()) {
+            user.setGender(request.getGender());
+        }
+
+        if(request.getCompanyId() != null &&
+                !request.getCompanyId().isBlank()) {
+            user.setCompanyId(request.getCompanyId());
+        }
+
+        if(request.getActive() != null){
+            user.setActive(request.getActive());
+        }
+    }
+
+    private void updateRole(UserRequest request, User user){
+        if(request.getRoleId() != null ||
+                (request.getRole() != null &&
+                        !request.getRole().isBlank())) {
+
+            Role role = resolveRole(request);
+
+            user.setRole(role);
+            user.setRoleName(role.getRoleName());
+        }
+    }
+
+    private void updatePassword(UserRequest request, User user){
+        if(request.getUserPassword() != null && !request.getUserPassword().isBlank()) {
+            user.setUserPswd(passwordEncoder.encode(request.getUserPassword()));
+        }
     }
 }
