@@ -1,17 +1,21 @@
-package com.cresensolutions.userservice.service;
+package com.cresensolutions.userservice.service.impl;
 
 import com.cresensolutions.userservice.dto.SendOtp;
 import com.cresensolutions.userservice.dto.VerifyOtp;
 import com.cresensolutions.userservice.entity.Otp;
 import com.cresensolutions.userservice.exception.CustomException;
 import com.cresensolutions.userservice.repository.OtpRepository;
+import com.cresensolutions.userservice.service.EmailService;
+import com.cresensolutions.userservice.service.ForgotPasswordService;
+import com.cresensolutions.userservice.service.OtpService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.mail.MailException;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+@RequiredArgsConstructor
 @Service
 public class ForgotPasswordServiceImpl implements ForgotPasswordService {
 
@@ -19,15 +23,8 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
     private final EmailService emailService;
     private final OtpRepository otpRepository;
 
-    public ForgotPasswordServiceImpl(OtpService otpService, EmailService emailService, OtpRepository otpRepository) {
-        this.otpService = otpService;
-        this.emailService = emailService;
-        this.otpRepository = otpRepository;
-    }
-
     @Override
     public void sendOtp(SendOtp sendOtpRequest) {
-
         String email = sendOtpRequest.getEmail();
 
         String otp = otpService.generateOtp();
