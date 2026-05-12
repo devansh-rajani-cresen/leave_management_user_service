@@ -11,6 +11,7 @@ public class UserConstants {
     public static final String AUTH_HEADER = "Authorization";
     public static final String HEADER_STARTING = "Bearer ";
     public static final Integer TOKEN_STARTING_INDEX = 7;
+    public static final Integer OTP_LENGTH = 6;
 
     // for Email Template
     public static final String LOGIN_URL = "loginUrl";
