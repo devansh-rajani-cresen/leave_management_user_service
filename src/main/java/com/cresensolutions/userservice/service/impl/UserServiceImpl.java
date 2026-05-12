@@ -44,6 +44,12 @@ public class UserServiceImpl implements UserService {
 
         // If user founds with the proper credentials (username)
         User user = dbUser.get();
+
+        boolean isActive = user.getActive();
+        if (!isActive){
+            throw new CustomException("Sorry, your account is not activated yet. Please contact HR!", 403);
+        }
+
         String correctUserPswd = user.getUserPswd();
         if (!passwordEncoder.matches(decodedPassword, correctUserPswd)) {
             throw new CustomException("Invalid credentials!", 401);
