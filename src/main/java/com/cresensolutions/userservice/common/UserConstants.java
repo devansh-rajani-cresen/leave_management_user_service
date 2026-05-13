@@ -27,6 +27,10 @@ public class UserConstants {
     public static final String WELCOME_MAIL_SUBJECT = "Welcome to Cresen Solutions!";
     public static final String SEND_WELCOME_MAIL_ERROR = "Unable to send welcome mail. Please contact support.";
 
+    // Update mail
+    public static final String UPDATE_MAIL_SUBJECT = "Your Cresen Solutions account has been updated";
+    public static final String SEND_UPDATE_MAIL_ERROR = "Unable to send account update mail. Please contact support.";
+
     // Exit mail
     public static final String EXIT_MAIL_SUBJECT = "Exit Process initiated at Cresen Solutions";
     public static final String EXIT_MAIL_SEND_ERROR = "Unable to send account deactivation email. Please contact support.";
