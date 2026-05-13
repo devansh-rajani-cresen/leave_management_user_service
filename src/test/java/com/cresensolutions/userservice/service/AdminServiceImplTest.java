@@ -16,7 +16,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
+import java.util.Map;
 import java.util.Optional;
+import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -188,14 +190,20 @@ class AdminServiceImplTest {
         UserRequest req = new UserRequest();
         req.setUserName("dev");
         req.setFullName("New Name");
+        req.setEmailId("new@mail.com");
         req.setRoleId(1L);
         req.setUserPassword("123");
+        req.setActive(true);
 
         Role role = new Role();
+        role.setId(1L);
         role.setRoleName("ADMIN");
 
         User user = new User();
         user.setUserName("dev");
+        user.setFullName("Old Name");
+        user.setEmailId("old@mail.com");
+        user.setActive(false);
 
         when(userRepository.findByUserName("dev")).thenReturn(Optional.of(user));
         when(roleRepository.findById(1L)).thenReturn(Optional.of(role));
@@ -204,6 +212,32 @@ class AdminServiceImplTest {
         service.updateUser(req);
 
         verify(userRepository).save(user);
+        ArgumentCaptor<Map<String, String>> updatedFieldsCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(emailService).sendUpdateMessage(eq("new@mail.com"), eq("dev"), updatedFieldsCaptor.capture());
+
+        Map<String, String> updatedFields = updatedFieldsCaptor.getValue();
+        assertEquals("New Name", updatedFields.get("Full Name"));
+        assertEquals("new@mail.com", updatedFields.get("Email"));
+        assertEquals("Active", updatedFields.get("Account Status"));
+        assertEquals("ADMIN", updatedFields.get("Role"));
+        assertEquals("123", updatedFields.get("Password"));
+    }
+
+    @Test
+    void updateUser_noChanges_doesNotSendUpdateMail() {
+        UserRequest req = new UserRequest();
+        req.setUserName("dev");
+
+        User user = new User();
+        user.setUserName("dev");
+        user.setEmailId("same@mail.com");
+
+        when(userRepository.findByUserName("dev")).thenReturn(Optional.of(user));
+
+        service.updateUser(req);
+
+        verify(userRepository).save(user);
+        verify(emailService, never()).sendUpdateMessage(anyString(), anyString(), any(Map.class));
     }
 
     @Test

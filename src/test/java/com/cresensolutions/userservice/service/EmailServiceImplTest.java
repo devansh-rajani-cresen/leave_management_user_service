@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.thymeleaf.TemplateEngine;
+import java.util.Map;
 import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -81,6 +82,35 @@ class EmailServiceImplTest {
                 () -> emailService.sendWelcomeMessage("test@mail.com", "dev", "123"));
 
         assertEquals("Unable to send welcome mail. Please contact support.", ex.getMessage());
+        assertEquals(500, ex.getStatus());
+    }
+
+    // SEND UPDATE
+
+    @Test
+    void sendUpdateMessage_success() throws Exception {
+        setFromEmail();
+
+        MimeMessage message = mock(MimeMessage.class);
+
+        when(mailSender.createMimeMessage()).thenReturn(message);
+        when(templateEngine.process(eq("update-user-mail"), any())).thenReturn("<html>update</html>");
+
+        emailService.sendUpdateMessage("test@mail.com", "dev", Map.of("Full Name", "Dev User"));
+
+        verify(mailSender).send(message);
+    }
+
+    @Test
+    void sendUpdateMessage_exception() throws Exception {
+        setFromEmail();
+
+        when(mailSender.createMimeMessage()).thenThrow(new RuntimeException());
+
+        CustomException ex = assertThrows(CustomException.class,
+                () -> emailService.sendUpdateMessage("test@mail.com", "dev", Map.of("Role", "ADMIN")));
+
+        assertEquals("Unable to send account update mail. Please contact support.", ex.getMessage());
         assertEquals(500, ex.getStatus());
     }
 
