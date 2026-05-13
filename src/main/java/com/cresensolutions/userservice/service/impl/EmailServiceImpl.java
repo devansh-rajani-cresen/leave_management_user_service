@@ -10,6 +10,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import java.util.Map;
 import static com.cresensolutions.userservice.common.UserConstants.*;
 
 @Slf4j
@@ -83,6 +84,35 @@ public class EmailServiceImpl implements EmailService {
             log.error("Error while sending Welcome email", e);
             throw new CustomException(
                     SEND_WELCOME_MAIL_ERROR,
+                    500
+            );
+        }
+    }
+
+    @Override
+    public void sendUpdateMessage(String toEmail, String username, Map<String, String> updatedFields) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, FROM_COMPANY_NAME);
+            helper.setTo(toEmail);
+            helper.setSubject(UPDATE_MAIL_SUBJECT);
+
+            Context context = new Context();
+            context.setVariable(USERNAME, username);
+            context.setVariable("updatedFields", updatedFields);
+            context.setVariable(LOGIN_URL, LOGIN_URL_VALUE);
+
+            String htmlContent = templateEngine.process("update-user-mail", context);
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+
+        } catch (Exception e) {
+            log.error("Error while sending Update email", e);
+            throw new CustomException(
+                    SEND_UPDATE_MAIL_ERROR,
                     500
             );
         }
