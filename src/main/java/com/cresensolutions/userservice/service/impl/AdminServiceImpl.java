@@ -21,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,12 +108,15 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new CustomException("User not found!", 404));
 
         try {
+            Map<String, String> updatedFields = new LinkedHashMap<>();
+            captureBasicDetailChanges(userRequest, user, updatedFields);
             updateBasicDetails(userRequest, user);
-            updateRole(userRequest, user);
-            updatePassword(userRequest, user);
+            updateRole(userRequest, user, updatedFields);
+            updatePassword(userRequest, user, updatedFields);
             user.setUpdateDate(DateTimeUtil.nowInIst());
             user.setUpdatedBy(userRequest.getCreatedBy());
             userRepository.save(user);
+            sendUpdateEmailIfNeeded(user, updatedFields);
         } catch (CustomException e) {
             throw e;
         } catch (Exception e) {
@@ -201,7 +205,6 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private void updateBasicDetails(UserRequest request, User user){
-
         if(request.getFullName() != null &&
                 !request.getFullName().isBlank()) {
             user.setFullName(request.getFullName());
@@ -227,21 +230,59 @@ public class AdminServiceImpl implements AdminService {
         }
     }
 
-    private void updateRole(UserRequest request, User user){
+    private void captureBasicDetailChanges(UserRequest request, User user, Map<String, String> updatedFields) {
+        if (hasChanged(request.getFullName(), user.getFullName())) {
+            updatedFields.put("Full Name", request.getFullName().trim());
+        }
+
+        if (hasChanged(request.getEmailId(), user.getEmailId())) {
+            updatedFields.put("Email", request.getEmailId().trim());
+        }
+
+        if (hasChanged(request.getGender(), user.getGender())) {
+            updatedFields.put("Gender", request.getGender().trim());
+        }
+
+        if (hasChanged(request.getCompanyId(), user.getCompanyId())) {
+            updatedFields.put("Company ID", request.getCompanyId().trim());
+        }
+
+        if (request.getActive() != null && !request.getActive().equals(user.getActive())) {
+            updatedFields.put("Account Status", Boolean.TRUE.equals(request.getActive()) ? "Active" : "Inactive");
+        }
+    }
+
+    private void updateRole(UserRequest request, User user, Map<String, String> updatedFields){
         if(request.getRoleId() != null ||
                 (request.getRole() != null &&
                         !request.getRole().isBlank())) {
 
             Role role = resolveRole(request);
+            if (user.getRole() == null || !role.getId().equals(user.getRole().getId())) {
+                updatedFields.put("Role", role.getRoleName());
+            }
 
             user.setRole(role);
             user.setRoleName(role.getRoleName());
         }
     }
 
-    private void updatePassword(UserRequest request, User user){
+    private void updatePassword(UserRequest request, User user, Map<String, String> updatedFields){
         if(request.getUserPassword() != null && !request.getUserPassword().isBlank()) {
             user.setUserPswd(passwordEncoder.encode(request.getUserPassword()));
+            updatedFields.put("Password", request.getUserPassword());
         }
+    }
+
+    private void sendUpdateEmailIfNeeded(User user, Map<String, String> updatedFields) {
+        if (!updatedFields.isEmpty()) {
+            emailService.sendUpdateMessage(user.getEmailId(), user.getUserName(), updatedFields);
+        }
+    }
+
+    private boolean hasChanged(String requestedValue, String existingValue) {
+        return requestedValue != null
+                && !requestedValue.isBlank()
+                && !requestedValue.trim().equals(existingValue);
     }
 }
