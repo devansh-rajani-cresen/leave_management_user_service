@@ -21,6 +21,19 @@ graph TD
     P --> M
     P --> E
 ```
+## Working flow :
+
+### 1. Login Flow :
+
+<img width="1808" height="546" alt="image" src="https://github.com/user-attachments/assets/8250d850-26e8-40aa-88e6-ce84947f371a" />
+
+### 2. Reset Password Flow :
+
+<img width="1577" height="737" alt="image" src="https://github.com/user-attachments/assets/b19162ef-9e6c-43de-9dca-1f59cc9d0113" />
+
+### 3. ADMIN/HR Workflow :
+
+<img width="1728" height="701" alt="image" src="https://github.com/user-attachments/assets/9a9b38c8-d363-485c-b468-0447044a1ab5" />
 
 ## Role Descriptions & Endpoints
 
