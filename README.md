@@ -51,6 +51,7 @@ Admins manage the foundational organizational data and user lifecycle through th
 *   **Offboarding:** Deactivate user accounts and trigger exit notification emails during employee separation.
 *   **Leave Management:** Create leave requests for employees and manage public holidays for the organization.
 *   **Insights:** Provide organizational statistics and basic user data for internal AI chatbot queries and administrative dashboards.
+*   **Achievements Overview:** Monitor and track professional certifications and achievements uploaded by employees.
 
 **Admin Endpoints:**
 * `GET /admin/get-users` 
@@ -77,12 +78,16 @@ Admins manage the foundational organizational data and user lifecycle through th
 * `GET /internal/users/search?name={name}`
     * **Response:** `List<BasicUserInfoForAI>` (userId, fullName, role, email)
 
+* `GET /achievements/all-achievements`
+    * **Response:** `List<UserAchievement>` (id, fileName, shortDescription, uploadedAt, fileUrl, storedFileName, originalFileName, user)
+
 ### 2. MANAGER Panel
 Managers utilize this service primarily for identity and access management:
 *   **Authentication:** Securely log in using credentials to obtain JWT tokens for authorized platform access.
 *   **Identity Management:** Access and verify personal profile data, including role and active status.
 *   **Account Recovery:** Initiate secure password resets via email-based OTPs when credentials are lost.
 *   **Security Updates:** Reset and update account passwords with modern cryptographic hashing (BCrypt).
+*   **Milestone Management:** View, upload, view/download, and delete personal professional achievements and certificates.
 
 **Manager Endpoints:**
 * `POST /auth/login`
@@ -105,12 +110,30 @@ Managers utilize this service primarily for identity and access management:
     * **Request:** `ResetPasswordRequest` (email, newPassword)
     * **Response:** `SuccessResponse` (message: "Password reset!")
 
+* `GET /achievements/my-achievements`
+    * **Header:** `Authorization: Bearer <token>`
+    * **Response:** `List<UserAchievement>` (id, fileName, shortDescription, uploadedAt, fileUrl, storedFileName, originalFileName)
+
+* `POST /achievements/upload-achievement`
+    * **Header:** `Authorization: Bearer <token>`
+    * **Request:** Multipart Form Data: `files` (MultipartFile List), `shortDescriptions` (String List)
+    * **Response:** `String` ("Achievements uploaded successfully" status message)
+
+* `GET /achievements/view/{id}`
+    * **Header:** `Authorization: Bearer <token>`
+    * **Response:** `String` (Amazon S3 or storage viewable file url)
+
+* `DELETE /achievements/{id}`
+    * **Header:** `Authorization: Bearer <token>`
+    * **Response:** `String` ("Achievement deleted successfully" status message)
+
 ### 3. EMPLOYEE Panel
 Employees interact with the service to manage their profile and structural organizational data:
 *   **Access:** Authenticate into the system and manage personal session security.
 *   **Profile Review:** Retrieve personal details and confirm account standing.
 *   **Workflow Preparation:** Fetch a list of active Managers to correctly select an approver during leave applications.
 *   **Self-Service Recovery:** Perform end-to-end password recovery using the integrated OTP verification system.
+*   **Milestone Management:** View, upload, view/download, and delete personal professional achievements and certificates.
 
 **Employee Endpoints:**
 * `POST /auth/login`
@@ -135,3 +158,20 @@ Employees interact with the service to manage their profile and structural organ
 * `POST /auth/reset-password`
     * **Request:** `ResetPasswordRequest` (email, newPassword)
     * **Response:** `SuccessResponse` (message: "Password reset!")
+
+* `GET /achievements/my-achievements`
+    * **Header:** `Authorization: Bearer <token>`
+    * **Response:** `List<UserAchievement>` (id, fileName, shortDescription, uploadedAt, fileUrl, storedFileName, originalFileName)
+
+* `POST /achievements/upload-achievement`
+    * **Header:** `Authorization: Bearer <token>`
+    * **Request:** Multipart Form Data: `files` (MultipartFile List), `shortDescriptions` (String List)
+    * **Response:** `String` ("Achievements uploaded successfully" status message)
+
+* `GET /achievements/view/{id}`
+    * **Header:** `Authorization: Bearer <token>`
+    * **Response:** `String` (Amazon S3 or storage viewable file url)
+
+* `DELETE /achievements/{id}`
+    * **Header:** `Authorization: Bearer <token>`
+    * **Response:** `String` ("Achievement deleted successfully" status message)
