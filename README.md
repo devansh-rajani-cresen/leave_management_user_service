@@ -35,6 +35,11 @@ graph TD
 
 <img width="1728" height="701" alt="image" src="https://github.com/user-attachments/assets/9a9b38c8-d363-485c-b468-0447044a1ab5" />
 
+
+### 4. Achievement Workflow :
+
+<img width="1352" height="682" alt="image" src="https://github.com/user-attachments/assets/53b847be-7068-458b-8828-ea0a1e5a692c" />
+
 ## Role Descriptions & Endpoints
 
 ### 1. ADMIN Panel
